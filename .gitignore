@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pkl
+.env
+chroma_exam_db/
+chroma_question_db/
+data/
+cag/
