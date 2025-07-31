@@ -1,4 +1,4 @@
-# 🧠 KIIT ExamGPT
+# 🧠 Maestro
 
 An AI-powered exam prep assistant built for KIIT University students, using LLaMA 3, LangChain, and ChromaDB — powered entirely offline with Retrieval-Augmented Generation (RAG).
 
