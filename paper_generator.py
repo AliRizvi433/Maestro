@@ -43,12 +43,43 @@ def generate_sample_paper(subject, year_filter=None, exam_type_filter=None):
     if not question_pool:
         return "No actual questions available for the selected filter."
 
-    sample_questions = random.sample(question_pool, min(8, len(question_pool)))
-    paper = [f"Sample Paper for {subject.upper()}", "", "Section A (Compulsory)"]
-    paper.extend(f"{index}. {question}" for index, question in enumerate(sample_questions[:4], 1))
-    paper.extend(["", "Section B (Answer any 3)"])
+    target_count = min(24, len(question_pool))
+    sample_questions = random.sample(question_pool, target_count)
+
+    section_a_count = min(8, target_count)
+    section_b_count = min(8, max(0, target_count - section_a_count))
+    section_c_count = max(0, target_count - section_a_count - section_b_count)
+
+    paper = [
+        f"Sample Paper for {subject.upper()}",
+        "",
+        "Section A (Compulsory)",
+        "Answer all questions.",
+    ]
     paper.extend(
         f"{index}. {question}"
-        for index, question in enumerate(sample_questions[4:], 5)
+        for index, question in enumerate(sample_questions[:section_a_count], 1)
     )
+
+    paper.extend(["", "Section B (Answer any 5)", ""])
+    section_b_start = section_a_count
+    section_b_end = section_a_count + section_b_count
+    paper.extend(
+        f"{index}. {question}"
+        for index, question in enumerate(
+            sample_questions[section_b_start:section_b_end],
+            section_a_count + 1,
+        )
+    )
+
+    if section_c_count:
+        paper.extend(["", "Section C (Answer any 3)", ""])
+        section_c_start = section_b_end
+        paper.extend(
+            f"{index}. {question}"
+            for index, question in enumerate(
+                sample_questions[section_c_start:],
+                section_a_count + section_b_count + 1,
+            )
+        )
     return "\n".join(paper)
