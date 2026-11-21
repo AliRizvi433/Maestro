@@ -23,9 +23,8 @@ The vector index extracts supported question text and metadata from these files.
 
 ## Technology
 
-- Google Gemini:
-  - Generation: `gemini-3.5-flash-lite`
-  - Embeddings: `gemini-embedding-001`
+- Google Gemini generation: `gemini-3.5-flash-lite`
+- Embeddings: local `all-MiniLM-L6-v2` model by default
 - LangChain
 - ChromaDB
 - Python virtual environment
@@ -46,6 +45,7 @@ Create a `.env` file in the project root:
 GEMINI_API_KEY=your-api-key-here
 GEMINI_MODEL=gemini-3.5-flash-lite
 GEMINI_EMBEDDING_MODEL=gemini-embedding-001
+EMBEDDING_BACKEND=local
 ```
 
 Keep the API key private. `.env` is ignored by Git.

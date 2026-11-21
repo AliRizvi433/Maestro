@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_core.embeddings import Embeddings
 
 
 ROOT_DIR = Path(__file__).resolve().parent
@@ -41,40 +42,68 @@ def _question_documents(exam, subject):
     )
 
     documents = []
+    seen_texts = set()
+
+    def add_document(text, block=None, section=None, part=None):
+        normalized = str(text).strip()
+        key = normalized.lower()
+        if len(normalized) < 10 or key in seen_texts:
+            return
+        seen_texts.add(key)
+        documents.append(
+            Document(
+                page_content=normalized,
+                metadata={
+                    **common_metadata,
+                    "question_number": str(
+                        (block or {}).get("question_number", "")
+                    ),
+                    "question_section": (
+                        (section or {}).get("section_name")
+                        or (block or {}).get("question_section")
+                        or ""
+                    ),
+                    "part_id": str((part or {}).get("part_id", "")),
+                    "marks": (
+                        (part or {}).get("marks")
+                        or (block or {}).get("marks_per_sub_question")
+                        or 0
+                    ),
+                },
+            )
+        )
+
     for block in exam.get("questions", []):
         for part in block.get("question_parts", []):
             text = str(part.get("text", "")).strip()
-            if text:
-                documents.append(
-                    Document(
-                        page_content=text,
-                        metadata={
-                            **common_metadata,
-                            "question_number": str(block.get("question_number", "")),
-                            "question_section": block.get("question_section", ""),
-                            "part_id": str(part.get("part_id", "")),
-                            "marks": part.get("marks", 0) or 0,
-                        },
-                    )
-                )
+            add_document(text, block=block, part=part)
+
+        aggregate_text = block.get("full_question_text_for_embedding")
+        if aggregate_text:
+            add_document(aggregate_text, block=block)
 
     for section in exam.get("sections", []):
         for block in section.get("questions", []):
             for part in block.get("sub_questions", []):
                 text = str(part.get("text", "")).strip()
-                if text:
-                    documents.append(
-                        Document(
-                            page_content=text,
-                            metadata={
-                                **common_metadata,
-                                "question_number": str(block.get("question_number", "")),
-                                "question_section": section.get("section_name", ""),
-                                "part_id": "",
-                                "marks": block.get("marks_per_sub_question", 0) or 0,
-                            },
-                        )
-                    )
+                add_document(text, block=block, section=section, part=part)
+
+    instructions = exam.get("instructions")
+    if isinstance(instructions, dict):
+        instruction_fields = (
+            "compulsory_section",
+            "total_questions_to_answer",
+            "questions_per_section_constraint",
+        )
+        for field in instruction_fields:
+            add_document(instructions.get(field), block={"question_section": "Instructions"})
+
+        for instruction in instructions.get("other_instructions", []):
+            add_document(instruction, block={"question_section": "Instructions"})
+
+    elif isinstance(instructions, list):
+        for instruction in instructions:
+            add_document(instruction, block={"question_section": "Instructions"})
     return documents
 
 
@@ -89,10 +118,39 @@ def load_question_documents():
     return documents
 
 
-embeddings = GoogleGenerativeAIEmbeddings(
-    model=os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001"),
-    api_key=api_key,
-)
+class LocalEmbeddings(Embeddings):
+    def __init__(self, model_name="all-MiniLM-L6-v2"):
+        from sentence_transformers import SentenceTransformer
+
+        self.model = SentenceTransformer(model_name)
+
+    def embed_documents(self, texts):
+        embeddings = self.model.encode(
+            texts,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
+        return embeddings.tolist()
+
+    def embed_query(self, text):
+        embedding = self.model.encode(
+            text,
+            normalize_embeddings=True,
+            show_progress_bar=False,
+        )
+        return embedding.tolist()
+
+
+embedding_backend = os.getenv("EMBEDDING_BACKEND", "local").lower()
+if embedding_backend == "gemini":
+    embeddings = GoogleGenerativeAIEmbeddings(
+        model=os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001"),
+        api_key=api_key,
+    )
+else:
+    embeddings = LocalEmbeddings(
+        os.getenv("LOCAL_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+    )
 vector_store = Chroma(
     collection_name=COLLECTION_NAME,
     persist_directory=str(DB_DIR),
@@ -113,7 +171,7 @@ def build_vector_index():
     if not pending_documents:
         return 0
 
-    batch_size = 10
+    batch_size = 100
     for batch_start in range(0, len(pending_documents), batch_size):
         pending_batch = pending_documents[
             batch_start : batch_start + batch_size
