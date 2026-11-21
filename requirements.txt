@@ -1,6 +1,6 @@
-langchain
-langchain-ollama
+langchain-core
+langchain-google-genai
 langchain-chroma
-pandas
-tiktoken
 chromadb
+python-dotenv
+streamlit
