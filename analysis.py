@@ -4,7 +4,7 @@ from collections import defaultdict
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from paper_generator import _question_texts
+from paper_generator import _question_texts, exam_belongs_to_subject
 
 
 JSON_DIR = Path(__file__).resolve().parent / "json_subs"
@@ -20,6 +20,8 @@ def get_top_repeated_questions(subject, top_n=5):
         exams = json.load(file)
 
     for exam in exams:
+        if not exam_belongs_to_subject(exam, subject.upper()):
+            continue
         for text in _question_texts(exam):
             key = re.sub(r"\s+", " ", text).strip().lower()
             key = re.sub(r"[^a-z0-9\s]", "", key)

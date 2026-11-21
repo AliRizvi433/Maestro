@@ -6,6 +6,21 @@ from pathlib import Path
 JSON_DIR = Path(__file__).resolve().parent / "json_subs"
 
 
+def exam_belongs_to_subject(exam, subject):
+    subject_name = str(exam.get("subject_name", "")).lower()
+    subject_code = str(exam.get("subject_code", "")).upper()
+
+    if subject == "AI":
+        return "artificial intelligence" in subject_name
+    if subject == "ML":
+        return "machine learning" in subject_name or subject_name in {"ml", "machine-learning"}
+    if subject == "CC":
+        return "cloud" in subject_name or "cloud computing" in subject_name
+    if subject == "UHV":
+        return "human values" in subject_name or "universal human" in subject_name
+    return False
+
+
 def _question_texts(exam):
     texts = []
     for block in exam.get("questions", []):
@@ -34,6 +49,8 @@ def generate_sample_paper(subject, year_filter=None, exam_type_filter=None):
 
     question_pool = []
     for exam in exams:
+        if not exam_belongs_to_subject(exam, subject.upper()):
+            continue
         if year_filter and str(exam.get("year")) != str(year_filter):
             continue
         if exam_type_filter and exam.get("exam_type", "").lower() != exam_type_filter.lower():

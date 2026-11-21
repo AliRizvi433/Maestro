@@ -8,6 +8,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.embeddings import Embeddings
+from paper_generator import exam_belongs_to_subject
 
 
 ROOT_DIR = Path(__file__).resolve().parent
@@ -114,6 +115,8 @@ def load_question_documents():
             exams = json.load(file)
         subject = file_path.stem.upper()
         for exam in exams:
+            if not exam_belongs_to_subject(exam, subject):
+                continue
             documents.extend(_question_documents(exam, subject))
     return documents
 
