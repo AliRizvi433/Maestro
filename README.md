@@ -1,31 +1,81 @@
-# 🧠 Maestro
+# Maestro
 
-An AI-powered exam prep assistant built for KIIT University students, using LLaMA 3, LangChain, and ChromaDB — powered entirely offline with Retrieval-Augmented Generation (RAG).
+Maestro is an AI-powered exam preparation assistant for KIIT University students. It uses Gemini for answer generation and embeddings, LangChain for RAG orchestration, and ChromaDB for local vector retrieval.
 
-## 🚀 Features
+## Features
 
-- Ask questions from past papers by subject, year, or exam type
-- Get repeated questions or generate mock papers from real data
-- Fully offline RAG using `Ollama` and `mxbai-embed-large` embeddings
-- Filters results based on metadata like semester, marks, etc.
+- Ask questions from past exam papers.
+- Filter retrieval by subject, year, exam type, semester, and other paper metadata.
+- Find repeated questions.
+- Generate mock papers from actual historical questions.
+- Answer, explain, and prepare study material using retrieved paper context.
 
-## 📁 Data Structure
+## Data
 
-All historical papers are stored as structured JSONs in `json_subs/`.  
-Each file follows a format with metadata + actual question parts.
+Historical papers are stored in `json_subs/`:
 
-## ⚙️ Technologies Used
+- `AI.json`
+- `CC.json`
+- `ML.json`
+- `UHV.json`
 
-- 🧠 LLaMA 3 (via Ollama)
-- 🧵 LangChain + Prompt Templates
-- 📊 ChromaDB for vector search
-- 📄 JSON parsing & metadata filtering
+The vector index extracts supported question text and metadata from these files. UHV currently contains instructions rather than structured question records, so it has limited RAG and mock-paper coverage.
 
-## 🧪 Usage
+## Technology
 
-```bash
-# Run Ollama model locally (requires ollama installed)
-ollama run llama3
+- Google Gemini:
+  - Generation: `gemini-3.5-flash-lite`
+  - Embeddings: `gemini-embedding-001`
+- LangChain
+- ChromaDB
+- Python virtual environment
 
-# Then run the bot
+## Setup
+
+Run commands from the project root in Windows PowerShell.
+
+```powershell
+py -m venv .venv
+.venv\Scripts\activate
+python -m pip install -r requirements.txt
+```
+
+Create a `.env` file in the project root:
+
+```text
+GEMINI_API_KEY=your-api-key-here
+GEMINI_MODEL=gemini-3.5-flash-lite
+GEMINI_EMBEDDING_MODEL=gemini-embedding-001
+```
+
+Keep the API key private. `.env` is ignored by Git.
+
+## Build the vector index
+
+```powershell
+python build_index.py
+```
+
+The index is stored in `chroma_question_db/`. If a build is interrupted, rerun `python build_index.py`; it resumes from missing question IDs.
+
+## Run Maestro
+
+```powershell
 python main.py
+```
+
+Start the Streamlit interface:
+
+```powershell
+streamlit run app.py
+```
+
+The interface provides subject and exam-filter controls, chat, repeated-question lookup, sample-paper generation, and retrieved-source context.
+
+Select one of `AI`, `CC`, `ML`, or `UHV`, then enter an optional year and exam type. At the question prompt:
+
+- Enter an exam question for a Gemini-generated RAG answer.
+- Enter `sample paper` to generate a mock paper.
+- Enter `repeated` or `frequently asked` to show repeated questions.
+- Enter `back` to change subject.
+- Enter `q` to quit.

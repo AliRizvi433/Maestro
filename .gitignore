@@ -1,8 +1,15 @@
 __pycache__/
 *.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
 *.pkl
 .env
+.env.*
+!.env.example
 chroma_exam_db/
 chroma_question_db/
 data/
 cag/
+.streamlit/
